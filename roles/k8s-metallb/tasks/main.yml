@@ -1,0 +1,63 @@
+---
+# - name: Set strict ARP
+#   become_user: "{{ admin_user }}"
+#   ansible.builtin.shell: "kubectl get configmap kube-proxy -n kube-system -o yaml | sed -e 's/strictARP: false/strictARP: true/' | kubectl apply -f - -n kube-system"
+#   register: arp_result
+#   changed_when: arp_result.rc != 0
+
+- name: "Get kube-proxy ConfigMap"
+  become_user: "{{ admin_user }}"
+  kubernetes.core.k8s_info:
+    kind: ConfigMap
+    namespace: kube-system
+    name: kube-proxy
+  register: kube_proxy_config_map
+
+- name: Config conf to YAML
+  become_user: "{{ admin_user }}"
+  ansible.builtin.set_fact:
+    config_conf: "{{ kube_proxy_config_map.resources[0].data['config.conf'] | ansible.builtin.from_yaml | ansible.builtin.combine(patch, recursive=true) }}"
+  vars:
+    patch:
+      ipvs:
+        strictARP: true
+
+# - name: Output config
+#   ansible.builtin.debug:
+#     var: config_conf
+
+- name: "Replace kube-proxy config.conf data"
+  become_user: "{{ admin_user }}"
+  kubernetes.core.k8s_json_patch:
+    kind: ConfigMap
+    namespace: kube-system
+    name: kube-proxy
+    patch:
+      - op: replace
+        path: /data/config.conf
+        value: "{{ config_conf | to_nice_yaml(indent=2, width=120) }}"
+
+- name: Download MetalLB native manifest
+  become_user: "{{ admin_user }}"
+  ansible.builtin.get_url:
+    url: https://raw.githubusercontent.com/metallb/metallb/v0.13.9/config/manifests/metallb-native.yaml
+    dest: /tmp/metallb-native.yml
+    mode: 0664
+
+- name: Install MetalLB
+  become_user: "{{ admin_user }}"
+  kubernetes.core.k8s:
+    state: present
+    src: /tmp/metallb-native.yml
+
+- name: Copy config file
+  ansible.builtin.template:
+    src: metallb-ip-pool.yml.j2
+    dest: /tmp/metallb-ip-pool.yml
+    mode: 0644
+
+- name: Install MetalLB IP pool
+  become_user: "{{ admin_user }}"
+  kubernetes.core.k8s:
+    state: present
+    src: /tmp/metallb-ip-pool.yml

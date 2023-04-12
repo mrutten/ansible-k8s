@@ -1,10 +1,10 @@
 [k8s_masters]
-vm06
+k8s-master
 
 [k8s_workers]
-vm07
-vm08
-vm09
+k8s-worker-a
+k8s-worker-b
+k8s-worker-c
 
 [all:vars] 
 ansible_remote_tmp=/tmp

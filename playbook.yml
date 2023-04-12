@@ -22,3 +22,11 @@
     - k8s-worker
   vars:
     distro: "debian11"
+
+- hosts: k8s_masters
+  become: true
+  gather_facts: false
+  roles:
+    - k8s-metallb
+  vars:
+    distro: "debian11"
