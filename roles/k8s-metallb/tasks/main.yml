@@ -56,6 +56,17 @@
     dest: /tmp/metallb-ip-pool.yml
     mode: 0644
 
+- name: Wait for MetalLB to come up
+  become_user: "{{ admin_user }}"
+  kubernetes.core.k8s_info:
+    kind: Pod
+    namespace: metallb-system
+    wait: true
+    label_selectors:
+      - app=metallb
+    wait_sleep: 5
+    wait_timeout: 300
+
 - name: Install MetalLB IP pool
   become_user: "{{ admin_user }}"
   kubernetes.core.k8s:
