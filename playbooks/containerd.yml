@@ -1,0 +1,7 @@
+---
+- name: Containerd
+  hosts: k8s
+  become: true
+  gather_facts: true
+  roles:
+    - containerd

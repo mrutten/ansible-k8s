@@ -1,0 +1,39 @@
+---
+- name: Install Containerd
+  ansible.builtin.apt:
+    name: "{{ item }}"
+    state: present
+    update_cache: true
+  with_items:
+    - containerd
+  when: ansible_facts['os_family'] == 'Debian'
+  tags:
+    - install-containerd-debian
+
+- name: Create /etc/containerd if it does not exist
+  ansible.builtin.file:
+    path: /etc/containerd
+    state: directory
+    mode: '0755'
+
+- name: Check for existence of SystemdCgroup in /etc/containerd/config.toml
+  command: "grep 'SystemdCgroup' /etc/containerd/config.toml"
+  register: result
+  ignore_errors: true
+  changed_when: false
+
+- name: Create a copy of the default config if the default has not yet been generated
+  ansible.builtin.shell: containerd config default | tee /etc/containerd/config.toml
+  args:
+    executable: /bin/bash
+  when: result.rc != 0
+
+- name: Ensure Systemd Cgroups is set to true
+  ansible.builtin.lineinfile:
+    path: /etc/containerd/config.toml
+    regexp: '^(\s*)SystemdCgroup(\s*)=(\s*)false$' # Capture group as backreference
+    line: '\1SystemdCgroup = true' # \1 matches first capture group (\s*)
+    backrefs: true
+  notify: restart-containerd
+  tags:
+    - systemd-cgroups

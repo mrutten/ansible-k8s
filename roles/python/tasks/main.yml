@@ -1,0 +1,11 @@
+---
+- name: Install Python3 pip
+  ansible.builtin.apt:
+    name: "{{ item }}"
+    state: present
+    update_cache: true
+  with_items:
+    - python3-kubernetes
+  when: ansible_facts['os_family'] == 'Debian'
+  tags:
+    - install-python3-kubernetes-debian

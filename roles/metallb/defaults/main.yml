@@ -1,0 +1,4 @@
+---
+admin_user: "ops"
+ip_pool_start: 10.0.10.30
+ip_pool_end: 10.0.10.99

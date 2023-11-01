@@ -1,0 +1,27 @@
+---
+- name: Add the overlay module
+  community.general.modprobe:
+    name: overlay
+    persistent: "present"
+    state: present
+
+- name: Add the br_netfilter module
+  community.general.modprobe:
+    name: br_netfilter
+    persistent: "present"
+    state: present
+
+- name: Set net.bridge.bridge-nf-call-iptables to 1
+  ansible.builtin.sysctl:
+    name: net.bridge.bridge-nf-call-iptables
+    value: 1
+
+- name: Set net.bridge.bridge-nf-call-ip6tables to 1
+  ansible.builtin.sysctl:
+    name: net.bridge.bridge-nf-call-ip6tables
+    value: 1
+
+- name: Set net.ipv4.ip_forward to 1
+  ansible.builtin.sysctl:
+    name: net.ipv4.ip_forward
+    value: 1

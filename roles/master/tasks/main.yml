@@ -1,0 +1,54 @@
+---
+- name: Check for previously initialized cluster
+  ansible.builtin.stat:
+    path: /etc/kubernetes/admin.conf
+  register: previously_initialized
+
+- block:
+  - name: Initialize the Kubernetes control plane
+    ansible.builtin.shell: kubeadm init --pod-network-cidr={{ pod_network_cidr }}
+    register: init_result
+
+  - set_fact:
+      join_command: "{{ init_result.stdout_lines[-2:] | join('\n')}}"
+
+# In case the original kubeadm init token timed out, generate a new token with the command below
+# In Store token, replace content with content: "{{ k8s_token.stdout_lines[0] }}"
+# - name: Get worker join token
+#   become_user: "{{ admin_user }}"
+#   ansible.builtin.shell: kubeadm token create --print-join-command
+#   register: k8s_token
+#   changed_when: false
+
+  - name: Store token
+    ansible.builtin.copy:
+      dest: "/root/join.sh"
+      content: "{{ join_command }}"
+  when: previously_initialized.stat.exists == false
+
+- name: Wait for cluster initialization to complete
+  ansible.builtin.wait_for:
+    port: "{{ api_port }}"
+
+- name: create .kube directory
+  become_user: "{{ admin_user }}"
+  ansible.builtin.file:
+    path: $HOME/.kube
+    state: directory
+    mode: 0755
+
+- name: Check if kube config exists
+  become_user: "{{ admin_user }}"
+  ansible.builtin.stat:
+    path: $HOME/.kube/config
+  register: kube_config_exists
+
+- name: copy admin.conf to user's kube config
+  ansible.builtin.copy:
+    src: /etc/kubernetes/admin.conf
+    dest: /home/{{ admin_user }}/.kube/config
+    remote_src: yes
+    owner: "{{ admin_user }}"
+    group: "{{ admin_user }}"
+  when: kube_config_exists.stat.exists == false
+

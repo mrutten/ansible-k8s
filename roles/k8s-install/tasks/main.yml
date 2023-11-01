@@ -1,6 +1,0 @@
----
-- name: Include distribution specific variables
-  include_vars: "{{ distro }}.yml"
-
-- name: Include distribution specific tasks
-  include_tasks: "{{ distro }}.yml"

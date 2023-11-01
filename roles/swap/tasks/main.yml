@@ -1,0 +1,20 @@
+---
+- name: Get swap name when exists
+  ansible.builtin.shell: systemctl --type swap | grep 'swap' | awk '{print $1}'
+  register: swap_name
+  when: ansible_facts['swaptotal_mb'] > 0
+
+- name: Mask swap
+  become: true
+  ansible.builtin.shell: swapoff {{ swap_name.stdout }}
+  when: ansible_facts['swaptotal_mb'] > 0
+
+- name: Display swap name
+  ansible.builtin.debug:
+    var: swap_name.stdout
+  when: ansible_facts['swaptotal_mb'] > 0
+  
+
+- name: Display swap size
+  ansible.builtin.debug:
+    var: ansible_facts['swaptotal_mb']

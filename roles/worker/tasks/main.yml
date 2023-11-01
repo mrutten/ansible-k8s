@@ -1,0 +1,55 @@
+---
+- name: create .kube directory
+  become_user: "{{ admin_user }}"
+  ansible.builtin.file:
+    path: $HOME/.kube
+    state: directory
+    mode: 0755
+
+- name: Check if home config exists
+  become_user: "{{ admin_user }}"
+  ansible.builtin.stat:
+    path: $HOME/.kube/config
+  register: kube_config_exists
+
+- name: Get kube config from master
+  ansible.builtin.shell: cat /etc/kubernetes/admin.conf
+  register: kube_config
+  delegate_to: "{{ groups['masters'][0] }}"
+  when: kube_config_exists.stat.exists == false
+  changed_when: false
+
+- name: Creating kube config
+  ansible.builtin.copy:
+    dest: /home/{{ admin_user }}/.kube/config
+    content: "{{ kube_config.stdout }}"
+    owner: "{{ admin_user }}"
+    group: "{{ admin_user }}"
+  when: kube_config_exists.stat.exists == false
+
+- name: check existence of /etc/kubernetes/kubelet.conf
+  ansible.builtin.stat:
+    path: /etc/kubernetes/kubelet.conf
+  register: kubelet_conf_exists
+
+- name: Read join command from master
+  ansible.builtin.shell: cat /root/join.sh
+  register: join
+  delegate_to: "{{ groups['masters'][0] }}"
+  when: kubelet_conf_exists.stat.exists == false
+
+- name: Join workers
+  ansible.builtin.shell: "{{ join.stdout }}"
+  when: kubelet_conf_exists.stat.exists == false
+
+- name: Label worker nodes
+  become_user: "{{ admin_user }}"
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiversion: v1
+      kind: Node
+      metadata:
+        name: "{{ inventory_hostname }}"
+        labels:
+          node-role.kubernetes.io/worker: "worker"
