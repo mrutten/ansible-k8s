@@ -1,10 +1,10 @@
 [masters]
-k8smaster-01 ansible_host=10.0.10.9
+k8s-master01 ansible_host=10.0.10.9
 
 [workers]
-k8sworker-01 ansible_host=10.0.10.12
-k8sworker-02 ansible_host=10.0.10.13
-k8sworker-03 ansible_host=10.0.10.14
+k8s-worker01 ansible_host=10.0.10.12
+k8s-worker02 ansible_host=10.0.10.13
+k8s-worker03 ansible_host=10.0.10.14
 
 [k8s:children]
 masters
